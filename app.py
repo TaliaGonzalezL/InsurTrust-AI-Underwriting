@@ -91,18 +91,19 @@ with tab_chat:
             pregunta = st.text_input("Hazle una pregunta a la base de datos de LuxLogistics:")
             
             if pregunta:
-                try: # --- INICIO BLOQUE IA LIMPIO ---
-                    # 1. Configuramos el modelo sin parámetros obsoletos
+                try: # --- INICIO BLOQUE IA, Configuración del LLM ---
                     llm = ChatGoogleGenerativeAI(
-                         model="gemini-flash-latest", 
+                         model="gemini-flash-latest", # <--- Este es el modelo más "generoso" en cuota
                          google_api_key=user_api_key,
                          temperature=0
-                         # Quitamos 'transport' porque ya vimos que causa advertencia
                     )   
-                    # 2. Instrucciones ultra-directas
-                    prefix = "You are a Python expert. Work with the dataframe 'df'. Always provide a 'Final Answer:' in Spanish."
-
-                    # 3. Creamos el agente (Sin el parámetro que dio error en la terminal)
+                    # 2. Tu Prefix Ganador (super inteligente) para que la IA sepa cómo responder
+                    prefix = """
+                    You are a Python expert. The dataframe 'df' has columns like 'Order Region' and 'Sales'.
+                    To find the top regions by sales, use: df.groupby('Order Region')['Sales'].mean().
+                    Always answer in Spanish and end with 'Final Answer:'
+                    """
+                    # 3. Creación del Agente
                     agent = create_pandas_dataframe_agent(
                         llm, 
                         df_ia, 
@@ -115,28 +116,68 @@ with tab_chat:
 
                     with st.spinner("LuxLogistics AI está analizando tu consulta..."):
                         try:
-                            # INTENTO DE EJECUCIÓN
+                            # 4. Intento normal
                             resultado = agent.invoke(pregunta)
                             st.success("✅ Análisis Completado")
                             st.markdown(f"### {resultado['output']}")
+
                         except Exception as parse_err:
-                            # ESCUDO DE RECUPERACIÓN MEJORADO
+                            # 5. ESCUDO DE RECUPERACIÓN (Lo que nos dio la victoria)
                             error_str = str(parse_err)
-                            # Si la respuesta está ahí pero LangChain no la entiende:
-                            if "Final Answer:" in error_str:
-                                respuesta_final = error_str.split("Final Answer:")[-1].split("`")[0].strip()
-                                st.success("✅ Análisis Completado")
-                                st.markdown(f"### {respuesta_final}")
-                            # Si Gemini respondió pero sin el formato Final Answer
-                            elif "Could not parse LLM output: `" in error_str:
-                                respuesta_raw = error_str.split("Could not parse LLM output: `")[-1].rstrip("` ")
-                                st.success("✅ Análisis Completado")
-                                st.markdown(f"### {respuesta_raw}")
+                            #respuesta_final = ""
+
+                            # Si es error de cuota agotada
+                            if "429" in error_str or "quota" in error_str.lower():
+                                st.warning("⚠️ Límite de Google alcanzado. Espera 1 minuto para que se limpie la cuota.")  
+
+                            # Si la respuesta está ahí, la extraemos (opciones A y B fusionadas)
+                            elif "Final Answer:" in error_str or "Could not parse LLM output: `" in error_str:
+                                if "Final Answer:" in error_str:
+                                    res = error_str.split("Final Answer:")[-1]  
+                                else:
+                                    res = error_str.split("Could not parse LLM output: `")[-1]
+                                # Limpieza final de comillas y avisos técnicos
+                                respuesta_limpia = res.split("`")[0].replace("Agent stopped due to iteration limit or time limit.", "").strip()
+                                if len(respuesta_limpia) > 2:
+                                    st.success("✅ Análisis Completado")
+                                    st.markdown(f"### {respuesta_limpia}")
+                                else: 
+                                    st.error("La IA procesó los datos pero la respuesta fue muy corta. Intenta reformular.")
                             else:
-                                # Si de plano no hay nada, mostramos el error técnico para saber qué pasó
-                                st.error(f"La IA se confundió. Intenta preguntar de otra forma. (Detalle: {error_str[:100]}...)")
-                except Exception as e: # --- ESTE EXCEPT AHORA SÍ ESTÁ BIEN ALINEADO ---
-                    st.error(f"Error de conexión: {e}")
+                                # Último recurso: Mostrar el error limpio si no hay etiquetas
+                                st.info("🤖 Resultado del análisis:")
+                                st.write(error_str.split("troubleshooting")[0])
+                                
+                except Exception as parse_err:
+                    # --- ESTE ES EL ESCUDO REFORZADO ---
+                    error_str = str(parse_err)
+                    
+                    # 1. Si es un error de cuota (429)
+                    if "429" in error_str or "quota" in error_str.lower():
+                        st.warning("⚠️ Límite de Google alcanzado. Espera 1 minuto para que se reinicie la cuota gratuita.")
+                    
+                    # 2. Si es que la respuesta está ahí (aunque sea con error de formato)
+                    elif "Final Answer:" in error_str or "Could not parse LLM output: `" in error_str:
+                        if "Final Answer:" in error_str:
+                            res = error_str.split("Final Answer:")[-1]
+                        else:
+                            res = error_str.split("Could not parse LLM output: `")[-1]
+                        
+                        # --- GUILLOTINA ---
+                        # Cortamos en 'For troubleshooting' (el inicio del link feo), y luego quitamos las comillas (`) y espacios
+                        respuesta_limpia = res.split("For troubleshooting")[0].replace("`", "").strip()
+
+                        if len(respuesta_limpia) > 2:
+                            st.success("✅ Análisis Completado")
+                            # En formato grande para que luzca
+                            st.markdown(f"## {respuesta_limpia}") 
+                        else:
+                            st.error("La IA procesó los datos y dio una respuesta muy corta.")
+                    else:
+                        # Si es un error desconocido, también aplicamos el corte del link
+                        respuesta_final = error_str.split("For troubleshooting")[0].strip()
+                        st.info("🤖 Resultado: ")
+                        st.write(respuesta_final)
         else:
             st.info("💡 Introduce tu API Key de Google AI Studio para comenzar.")
     else:
