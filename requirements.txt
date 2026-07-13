@@ -1,9 +1,9 @@
-streamlit
-pandas
+streamlit>=1.35.0
+pandas>=2.2.0
 scikit-learn==1.6.1
 joblib
 langchain
-langchain-experimental
 langchain-google-genai
+langchain-experimental
 google-generativeai
 tabulate
