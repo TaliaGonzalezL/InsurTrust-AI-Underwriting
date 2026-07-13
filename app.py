@@ -119,7 +119,7 @@ with tab_chat:
                         max_iterations=15, agent_type="zero-shot-react-description", prefix=prefix
                     )
 
-                    with st.spinner("InsurTrust AI analizando siniestralidad..."):
+                    with st.spinner("InsurTrust AI analizando..."):
                         res_final = ""
                         try:
                             resultado = agent.invoke({"input": pregunta}, {"handle_parsing_errors": True})
@@ -127,13 +127,17 @@ with tab_chat:
                         except Exception as parse_err:
                             # --- ESCUDO DE RESCATE ---
                             error_str = str(parse_err)
+                            res_final = ""
                             # ¿Es un problema de cuota/dinero?
                             if "429" in error_str or "quota" in error_str.lower():
                                 st.warning("⚠️ Límite de Google alcanzado. Espera 1 minuto para que se resetee la cuota.")
                                 st.stop()
-
+                            if "503" in error_str:
+                                st.warning("🌐 **InsurTrust AI: Alta Demanda en el Servidor.**")
+                                st.info("Estamos experimentando latencia en los nodos de Google. Por favor, reintente en 30 segundos. En una implementación Enterprise (Vertex AI), este pico se elimina con capacidad reservada.")
+                                st.stop()
                             # Intentamos rescatar la respuesta si está ahí
-                            res_final = ""
+                           
                             if "Final Answer:" in error_str:
                                 res_final = error_str.split("Final Answer:")[-1]
                             elif "Could not parse LLM output: `" in error_str:
@@ -144,7 +148,7 @@ with tab_chat:
                                 res_final = error_str
 
                         # --- LA GUILLOTINA DE LINKS (Limpiamos solo si hay link técnico) ---
-                        for basura in ["For troubleshooting", "visit:", "https://"]:
+                        for basura in ["For troubleshooting", "visit:", "https://","Agent stopped"]:
                             if basura in res_final:
                                 res_final = res_final.split(basura)[0]
                         
