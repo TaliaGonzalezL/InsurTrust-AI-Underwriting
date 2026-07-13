@@ -128,16 +128,20 @@ with tab_chat:
                             # --- ESCUDO DE RESCATE ---
                             error_str = str(parse_err)
                             res_final = ""
-                            # ¿Es un problema de cuota/dinero?
-                            if "429" in error_str or "quota" in error_str.lower():
-                                st.warning("⚠️ Límite de Google alcanzado. Espera 1 minuto para que se resetee la cuota.")
-                                st.stop()
+                            
+                            # 1. FILTRO DE INFRAESTRUCTURA (PRIORIDAD ALTA)
                             if "503" in error_str:
                                 st.warning("🌐 **InsurTrust AI: Alta Demanda en el Servidor.**")
                                 st.info("Estamos experimentando latencia en los nodos de Google. Por favor, reintente en 30 segundos. En una implementación Enterprise (Vertex AI), este pico se elimina con capacidad reservada.")
                                 st.stop()
-                            # Intentamos rescatar la respuesta si está ahí
-                           
+
+                            # ¿Es un problema de cuota/dinero?
+                            elif "429" in error_str or "quota" in error_str.lower():
+                                st.warning("⚠️ Límite de Google alcanzado. Espera 1 minuto para que se resetee la cuota.")
+                                st.stop()    
+                            
+
+                            # 2. ESCUDO DE RESCATE (SI HAY RESPUESTA PERO ESTÁ SUCIA)                           
                             if "Final Answer:" in error_str:
                                 res_final = error_str.split("Final Answer:")[-1]
                             elif "Could not parse LLM output: `" in error_str:
