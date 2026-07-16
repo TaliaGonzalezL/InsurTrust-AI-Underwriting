@@ -8,5 +8,11 @@ InsurTrust AI is an Agentic platform designed to automate and fortify the medica
 *   **Agentic Analysis:** An autonomous AI agent that interrogates complex medical datasets via natural language.
 *   **Resilience Architecture:** Custom sanitization layers to ensure production-grade stability and data integrity.
 
+### 📄 Strategic Documentation
+This repository includes an **Intelligence Brief (Executive Summary)** that details my discovery of a **1.42% underwriting leakage** segment. 
+
+*   [**Download the Intelligence Brief (PDF)**](./InsurTrust_AI_Intelligence_Brief_Talia_Gonzalez.pdf) 
+*   **Key Insight:** Identifying atypical risk patterns in "healthy" profiles that can represent claim spikes of +$30,000 USD.
+
 ---
 *Created by LCDE. Talia González López | Applied AI Engineer*
